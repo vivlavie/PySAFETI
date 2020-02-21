@@ -211,7 +211,7 @@ for i in range(0,ncube):
     ts,pv,scn,hole,weather = scn.split("\\")
     dmy,weather_fire = weather.split(" ")
     hole,tlv = hole.split("_")
-    print("Cube: {:20s} {:6s} fire from {:20} during {:8.1f} [sec]".format(id,weather_fire[6:],di,scn+"_"+hole+"_"+weather_fire[:5]))
+    print("Cube: {:10s} {:5s} fire from {:30} during {:8.1f} [sec]".format(id,weather_fire[6:],scn+"_"+hole+"_"+weather_fire[:5],di))
 
 
 for c in Cubes:

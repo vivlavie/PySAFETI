@@ -5,7 +5,7 @@
 Jset = J05
 RRIndex = 1
 RRThreshold = 0.01 """
-
+from copy import deepcopy
 DimFreq = 1E-4
 
 #Threshold, Jset, RRIndex, RRThreshold = '05', J05, 1, 0.05
@@ -43,15 +43,18 @@ for Threshold in ['05']:
                 # for j in Js:
                     # topside,pressure_vessel,eqtag,hole,weather = j[0].split("\\")
                     # print("{} {:30s} {:.2e} {:6.1f}".format(mod, eqtag,j[1],j[2]))
-                cJs = Js
+                cJs = deepcopy(Js)
                 ec = np.zeros([len(cJs),2])
                 ec[-1,:]=[cJs[-1][1],cJs[-1][2]]
                 InterpolationSuccess = False
                 for ir in range(len(cJs)-2,-1,-1):
                     cp = cJs[ir+1][1]
-                    cJs[ir][1] += cp
+                    cJs[ir][1] += cp #cJs has already a cumulative frequency
                     cn = cJs[ir][1]
                     ec[ir,:] = [cn,cJs[ir][2]]
+                    e = cJs[ir]
+                    ts,pv,IS,hole,weather = e[0].split("\\")
+                    print("{:26s} ({:8.2e}) -  {:8.1f}".format(IS+"_"+hole+"_"+weather[-5:],e[1],e[2]))
                     if cn >= DimFreq and cp < DimFreq:
                         jp = cJs[ir+1][2]
                         jn = cJs[ir][2]
@@ -92,12 +95,12 @@ for Threshold in ['05']:
 e_dim_jet_low = next((x for x in lEvent if x.Key == cJs[ir-1][0]), None)         
 e_dim_jet_high = next((x for x in lEvent if x.Key == cJs[ir][0]), None)
 
-def print_cJs(cJs):
+def print_cum(AA):
     F=0.
-    print("{:20s} (Freq. ) - Jet Length  CumFreq".format("Scenario"))
-    for e in cJs:
+    print("{:26s} (Freq. ) - Jet Length  CumFreq".format("Scenario"))
+    for e in AA[::-1]:
         ts,pv,IS,hole,weather = e[0].split("\\")
         hole = hole.split("_")[0]
         F += e[1]
-        print("{:20s} ({:8.2e}) -  {:8.1f}   {:8.2e}".format(IS+"_"+hole,e[1],e[2],F))
-#Dummy code to test git
+        print("{:26s} ({:8.2e}) -  {:8.1f}   {:8.2e}".format(IS+"_"+hole+"_"+weather[-5:],e[1],e[2],F))
+print_cum(Js)

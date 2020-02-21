@@ -9,7 +9,7 @@ for e in lEvent:
     else:
         f += "  X  "
     if e.JetFire != None:
-        f += "  O  "
+        f += "{:5.1f}".e.JetFire.Length
     else:
         f += "  X  "
     if e.EarlyPoolFire != None:
