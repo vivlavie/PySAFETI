@@ -670,7 +670,7 @@ for r in range(2,shPool.max_row+1):
 shPool = cExl['Late Pool Fire']
 LPSEP = {}
 LPFreq = {}
-#Read Early Pool Fire
+#Read Late Pool Fire
 for r in range(2,shPool.max_row+1):
     study_folder_pv = shPool.cell(r,1).value
     scenario = shPool.cell(r,2).value
@@ -684,7 +684,7 @@ for r in range(2,shPool.max_row+1):
         if e.Key == key:
             epff = e.JetFire.Frequency
             LPFreq[key] = epff
-            e.EarlyPoolFire = EarlyPoolFire(dia,sep,epff)
+            e.LatePoolFire = LatePoolFire(dia,sep,epff)
 
 #Pool fire total frequency
 
