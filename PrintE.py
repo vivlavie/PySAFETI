@@ -1,4 +1,31 @@
 
+for e in lEvent:
+    pv,hole,weather = e.Key.split("\\")        
+    key_hole = pv +"-"+ hole
+    # rr = ReleaseRate[key_hole]
+    # print("{:20s} {:8.1f} {:8.2e} {:8.4f}".format(key_hole,rr,e.Frequency,e.PImdIgn))
+    print(key_hole, e.Discharge.RRs)
+
+for e in lEvent:
+    pv,hole,weather = e.Key.split("\\")        
+    key_hole = pv +"-"+ hole
+    rr = ReleaseRate[key_hole]
+    print("{:20s} {:8.1f} {:8.2e} {:8.4f}".format(key_hole,rr,e.Frequency,e.PImdIgn))
+    
+
+#Verification of Frequency adjustment for 'LM' 
+for k in Frequency:
+    f = Frequency[k]
+    print("{:20s} {:8.2e} {:8.2e} {:8.2e} {:8.2e}".format(k,f[0],f[1],f[2],f[3]))
+
+
+for e in lEvent:
+    print(e.Key,e.Discharge.ReleaseRate,e.PImdIgn)
+
+
+
+
+
 print("Path          Module (     X,     Y,     Z)  Hole   Wind  P[barg]     T[degC]                         Disp  Jet  EPF  LFP  Exp  Fireball")
 for e in lEvent:    
     ts,pv,IS,hole = e.Path.split("\\")
@@ -9,7 +36,7 @@ for e in lEvent:
     else:
         f += "  X  "
     if e.JetFire != None:
-        f += "{:5.1f}".e.JetFire.Length
+        f += "{:5.1f}".format(e.JetFire.Length)
     else:
         f += "  X  "
     if e.EarlyPoolFire != None:
