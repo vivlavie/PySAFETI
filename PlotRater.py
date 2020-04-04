@@ -50,7 +50,7 @@ i = 0
 j = 0 #print figure index
 # for s in scns:
 FigurePLot = False
-PrintRater = True
+PrintRater = False
 
 numHoles = 4
 numCases = 4
@@ -100,7 +100,21 @@ for s in [scns[0]]:
                     RR.append([i,rr_i,list( (float(id_vs_rr[rr_i]/rri[0]*rr) for rr in rri))])
                     RRSet[i][rr_i] = True
                 rr_i += 1
-            print('Set up to',i,rr_i-1)
+            if rr_i == 0:
+                print(i,' skipped')
+            else:
+                print(i,' Processed')
+                # print('Set up to',i,rr_i-1)
+            if (("LM" in e.Hole) or ("LA" in e.Hole)) and (e.Discharge.ReleaseRate < id_vs_rr[-1]):
+                #Extrapolate the consequence
+                for rr_i in range(rr_i,len(id_vs_rr)):
+                    RR.append([i,rr_i,list( (float(id_vs_rr[rr_i]/rri[0]*rr) for rr in rri))])
+                    RRSet[i][rr_i] = True
+                print(i,' read up to',rr_i)
+            if rr_i > 0:
+                for rr_i in range(0,len(id_vs_rr)):
+                    print(RR[rr_i][0],RR[rr_i][2][-3:-1])
+
 
 # for s in [scns[0]]:
 #     ISs = []
