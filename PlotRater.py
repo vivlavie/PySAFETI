@@ -54,7 +54,8 @@ PrintRater = True
 
 numHoles = 4
 numCases = 4
-id_vs_rr = [0.1, 0.2, 0.4, 0.5, 0.8, 1, 1.2, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 26, 30, 34, 38, 40, 46, 50, 55, 60, 65, 70, 75, 85, 95, 105, 115, 125, 150, 175, 200, 250, 300, 400, 600, 800, 1000]
+# id_vs_rr = [0.1, 0.2, 0.4, 0.5, 0.8, 1, 1.2, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 26, 30, 34, 38, 40, 46, 50, 55, 60, 65, 70, 75, 85, 95, 105, 115, 125, 150, 175, 200, 250, 300, 400, 600, 800, 1000]
+id_vs_rr = [0.1, 0.2, 0.4, 0.5, 0.8, 1, 1.2, 2, 3, 4, 5, 6, 8, 10]
 numLeakRates = len(id_vs_rr)
 RR = [] #to be of the dimension numRates x numscn
 RRSet =  [[False for x in range(numLeakRates)] for x in range(numscn)] 
@@ -75,16 +76,17 @@ for s in [scns[0]]:
             r_e = interp1d(e.TVD[:,0],e.TVD[:,2],kind='linear')
             rri = r_e(tti)
             k = len(rri)-1
-            while (k > 0) and (rri[k] < 0.1):
-                k -= 1
-            if k>1:
-                tti = tti[:k]
-                rri = rri[:k]
+            #If to trim the release rate less than 0.1 kg/sec, which should not be made if it is to fit the curve to a larger release rate
+            # while (k > 0) and (rri[k] < 0.1):
+            #     k -= 1
+            # if k>1:
+            #     tti = tti[:k]
+            #     rri = rri[:k]
 
-                if FigurePLot == True:
-                    axes[int(j/numHoles),j%numCases].plot(tti,rri)
-                    axes[int(j/numHoles),j%numCases].set_title("{:s} {:s} - {:s} m0: {:6.1f}".format(s,e.Key, e.Hole, rri[0]))
-                    j += 1
+            if FigurePLot == True:
+                axes[int(j/numHoles),j%numCases].plot(tti,rri)
+                axes[int(j/numHoles),j%numCases].set_title("{:s} {:s} - {:s} m0: {:6.1f}".format(s,e.Key, e.Hole, rri[0]))
+                j += 1
 
             if PrintRater == True:
                 print(s,e.Hole,j+1,i,rri,sep=';')
