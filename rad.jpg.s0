@@ -1,0 +1,30 @@
+# Created by kfxview
+ISOCOL: 1
+GRATING: 0.2
+INCLUDE: /home/sung-hoon/RUBY/Fire/ruby_pp/Rev.B/ruby.kfx
+SIZEPX: 1359 862
+LOADFIELD: /home/sung-hoon/RUBY/Fire/ruby_pp/Rev.B/%%NN%%_rad_exit.r3d 
+SAVEIMAGE: %%NN%%_rad.jpg
+> key - p f d O 
+> centerpoint 176.184 42.5785 83.301
+> width 220.672
+> radius 220.672
+> v-ang 32.1051 53.0762
+> XM -300.011
+> YM -400.011
+> ZM -0.009
+> XP 500.011
+> YP 400.011
+> ZP 319.308
+> bg 1 1 1
+> fg 0 0 0
+> frame 0
+LEGFORMAT: %g
+CONTOURPROJ: 0 0 0
+ISOPARAM: 1 0.2 0.2 0.4 2 2
+CONTOURMODE: 0 1 1 
+CONTOUR: s 37500 0 1 1 
+ISOPARAM: 1 1 0.2 0.4 2 2
+CONTOURMODE: 0 1 1 
+CONTOUR: s 37500 0 1 0 
+LOADIMAGE: computit.jpg -10 18

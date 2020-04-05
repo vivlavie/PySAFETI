@@ -1,0 +1,27 @@
+# Created by kfxview
+ISOCOL: 1
+GRATING: 0.2
+INCLUDE: /home/seojml/Projects/Reliance/3D_model_60p/RUBY_FPSO_.kfx
+SIZEPX: 1221 607
+LOADFIELD: /home/sung-hoon/RUBY/Fire/ruby_pp/Rev.B/%%NN%%_std_exit.r3d 
+SAVEIMAGE: %%NN%%_flame.jpg
+> key - p f d O 
+> centerpoint 145.38 16.2422 44.6685
+> width 150.957
+> radius 150.957
+> v-ang 26.6726 123.382
+> XM -300.01
+> YM -400.01
+> ZM -0.012
+> XP 500.01
+> YP 400.01
+> ZP 319.31
+> bg 1 1 1
+> fg 0 0 0
+> frame 0
+LEGFORMAT: %g
+CONTOURPROJ: 0 0 0
+ISOPARAM: 1 0.5 0 0.4 1 1
+CONTOURMODE: 0 1 1 
+CONTOUR: s 1100 0 4 1 
+LOADIMAGE: computit.jpg -10 18
