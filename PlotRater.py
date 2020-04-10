@@ -122,6 +122,7 @@ for s in scns[0:5]:
             # if rr_i > 0:
             #     for rr_i in range(0,len(id_vs_rr)):
             #         print(RR[rr_i][0],RR[rr_i][2][-3:-1])
+        
 
 
 # for s in [scns[0]]:
