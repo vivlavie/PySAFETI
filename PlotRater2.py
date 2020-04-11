@@ -46,7 +46,9 @@ RRSet =  [[[False,[]] for x in range(numLeakRates)] for x in range(numscn+1)] # 
 # for s in [scns[0]]:
 i = 0
 ScnIndex = {}
-for s in [scns[35:40]]:
+ScnsToAnalyse =  scns[35:40]
+ScnsToAnalyse =  scns
+for s in ScnsToAnalyse:
 # for s in scns:
     i += 1 #id for section
     ScnIndex[s] = i    
@@ -113,6 +115,8 @@ for s in [scns[35:40]]:
                     k += 1 """
                 # RR.append([i,rr_i,list( (float(id_vs_rr[rr_i]/rri[0]*rr) for rr in rri))])                
                 RRSet[i][rr_i][0] = True
+                if rri_scaled == []:
+                    print(i,j,'rri scaled []')
             rr_i += 1
             ri0 = id_vs_rr[rr_i]        
         
@@ -121,16 +125,58 @@ for s in [scns[35:40]]:
             print("Am in in LM/LA logic?",s,e.Hole)
             for rr_j in range(rr_i,len(id_vs_rr)):                
                 if RRSet[i][rr_j][0] == False:
-                    RRSet[i][rr_j][1] = list( (float(id_vs_rr[rr_j]/rri[0]*rr) for rr in rri))
+                    rri_scaled = list( (float(id_vs_rr[rr_j]/rri[0]*rr) for rr in rri))
+                    RRSet[i][rr_j][1] = rri_scaled
                     # RR.append([i,rr_j,list( (float(id_vs_rr[rr_j]/rri[0]*rr) for rr in rri))])
                     RRSet[i][rr_j][0] = True
-                    print("RR: {:8.2f} & Scale {:8.2f}".format(id_vs_rr[rr_j], id_vs_rr[rr_j]/rri[0]))
+                    if rri_scaled == []:
+                        print(i,j,'rri scaled [] for LM')
+                    # print("RR: {:8.2f} & Scale {:8.2f}".format(id_vs_rr[rr_j], id_vs_rr[rr_j]/rri[0]))
             if PrintRater == False:
                 print(i,' read up to',rr_j)
             # if rr_i > 0:
             #     for rr_i in range(0,len(id_vs_rr)):
             #         print(RR[rr_i][0],RR[rr_i][2][-3:-1])
+    for j in range(0,numLeakRates):
+        #Total release mass shall be considered
+        k = 0
+        rri = RRSet[i][j][1]
+        MassReleased = 0.5*(rri[k+1] + rri[k])*1 #Time difference, 1 sec
+        while (MassReleased < MassReleasedTotal) and (k < len(rri)-2):
+            k += 1
+            MassReleased += 0.5*(rri[k+1] + rri[k])*1 #Time difference, 1 sec
+            #if the release rate is too low, the total MassRelesed would be less than that durign 1 hour.
         
+        #if MassRelease is already larger than MassReleasedTotal for k=0,
+
+        # 'k' then should be the index for the end of the time or till the release made upto the MassReleasedTotal
+        # k = len(RRSet[i][j][1])
+        # Release rate less than 0.1 kg/sec should be neglected
+        if rri == []:
+            print(i,j,"rri none before removing mdot < 0.1")
+        while (rri[k-1] < 0.1) and (k>1):
+            k -= 1
+        rri_trimmed = rri[0:k]            #Still rri[0:0] ... not []
+        RRSet[i][j][1] = rri_trimmed
+
+        if rri == []:
+            print(i,j,"rri none after removing mdot < 0.1")
+
+
+        #Mass released update
+        k = 0        
+        if len(rri) > 1:
+            MassReleased2 = 0.5*(rri[k+1] + rri[k])*1 #Time difference, 1 sec
+            while (MassReleased2 < MassReleasedTotal) and (k < len(rri)-2):
+                k += 1
+                MassReleased2 += 0.5*(rri[k+1] + rri[k])*1 #Time difference, 1 sec            
+            print(MassReleasedTotal, "?=", MassReleased, MassReleased2, ":", rri[0], "released during ", len(rri), " seconds")
+        
+        else: #at leat rri having more than 1 element
+            print(MassReleasedTotal, "?=", MassReleased, ":", rri[0], "released during ", len(rri), " seconds")
+
+    # print(j+1,i,'; '.join(map(str,"{:8.2f}".format(rri[0:5]))),' ',sep='; ')#not working ...
+    # print(j+1,i,'; '.join(map(str,rri)),' ',sep='; ',file=raterfile)
        
 
 
@@ -140,38 +186,19 @@ if PrintRater == True:
     raterfile = open('rater_vis.txt','w')
     print(0.1,'; ',numscn,'; ',file=raterfile)
     print('; '.join(map(str,scns)),';',file=raterfile) # what if there happens an errro with the trailing ' ;' with a blank cell
-    for s in ScnIndex.keys():
+    for s in ScnsToAnalyse:
         i = ScnIndex[s]
         #After construction RR, print it out with rr > 0.1 kg/sec up to the total amount
-        
+               
         #index 'i' for identification of the section
         # print(j+1,i,'; '.join(map(str,rri)),' ',sep='; ',file=raterfile)
         #If to trim the release rate less than 0.1 kg/sec, which should not be made if it is to fit the curve to a larger release rate
-        for j in range(0,numLeakRates):
-            #Total release mass shall be considered
-            k = 0
+        for j in range(0,numLeakRates):            
             rri = RRSet[i][j][1]
-            MassReleased = 0.5*(rri[k+1] + rri[k])*1 #Time difference, 1 sec
-            while (MassReleased < MassReleasedTotal) and (k < len(rri)-2):
-                k += 1
-                MassReleased += 0.5*(rri[k+1] + rri[k])*1 #Time difference, 1 sec
-                #if the release rate is too low, the total MassRelesed would be less than that durign 1 hour.
-            
-            # 'k' then should be the index for the end of the time or till the release made upto the MassReleasedTotal
-            # k = len(RRSet[i][j][1])
-            # Release rate less than 0.1 kg/sec should be neglected
-            while (rri[k-1] < 0.1) and (k>1):
-                k -= 1
-            rri = rri[0:k]            
-            RRSet[i][j][1] = rri
-
-            # print(j+1,i,'; '.join(map(str,"{:8.2f}".format(rri[0:5]))),' ',sep='; ')#not working ...
-            # print(j+1,i,'; '.join(map(str,rri)),' ',sep='; ',file=raterfile)
             if rri == []:
                 print(j+1,i,'; '.join(map("{:.2f}".format,[id_vs_rr[j]])),' 0.1;',sep='; ',file=raterfile)
             else:
                 print(j+1,i,'; '.join(map("{:.2f}".format,rri)),' 0.1;',sep='; ',file=raterfile)
-            print(MassReleasedTotal, MassReleased, " during ", len(rri), " seconds")
         
         # is_to_plot = '013-01-N1-G'
         if FigurePLot == True:                  
@@ -181,11 +208,14 @@ if PrintRater == True:
             for j in range(1,numLeakRates-10):
             # for j in range(0,1):
                 rri = RRSet[i][j][1]
-                tti = range(0,len(rri))
-                axes[int(j/5),j%5].plot(tti,rri)
-                axes[int(j/5),j%5].set_title("{:6.1f}/{:4d}".format(rri[0],tti[-1]))
-                #Another title
-                # axes[int(j/5),j%5].set_title("Section {:s} - mdot(t=0): {:6.1f}".format(is_to_plot,rri[0]))
+                if not ( rri == []):
+                    tti = range(0,len(rri))
+                    axes[int(j/5),j%5].plot(tti,rri)
+                    axes[int(j/5),j%5].set_title("{:6.1f}/{:4d}".format(rri[0],tti[-1]))
+                    #Another title
+                    # axes[int(j/5),j%5].set_title("Section {:s} - mdot(t=0): {:6.1f}".format(is_to_plot,rri[0]))
+                else:
+                    print("Skipping plotting ",s," for rate ",id_vs_rr[j])
             fig.savefig("rater_{}.png".format(s))
             plt.close()
     raterfile.close()        
