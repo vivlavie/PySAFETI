@@ -1,12 +1,12 @@
-#PyDimCube
+#PyDimCube4_Utility
+#Effect of process fire onto Utility modules
 #For a cube, read from each cube the duration that jet fire impinges on it
 #PyDimCube3
 #To consider failure cases for fire or gas detector
 #Failure of fire detector for immediate ignition
 #Failure of gas detectin for delayed ignition
 
-#PyDimCube4 using 'Bv06_c.xlsx'
-
+#Pool fire is neglected
 
 from openpyxl import load_workbook
 import math
@@ -17,37 +17,23 @@ import scipy.ndimage
 from scipy.ndimage.filters import gaussian_filter
 import dill
 import sys
-
 import matplotlib.pylab as pltparam
 
 
-# sys.stdout = open('DimCube4.txt','w')
+# sys.stdout = open('DimCube2.txt','w')
 
-FireWallBtn3and4 = False
-WantPlot = False
-cube_result2file = False
-FirewallX = 140.7 #meter from AP
+# FireWallBtn3and4 = False
+# FirewallBtn3and4X = 140.7 #meter from AP
+
+FireWallBtnUandP = True
+FirewallBtnUandPX = 98.7 #meter from AP
+
+WantPlot = True
+cube_result2file = True
 
 DimCubeSuccessList = {}
 DimCubeFailList = {}
-def DtoH (D05):
-    if D05 > 19.7:
-            H05 = 0.4664*D05 + 18.345
-    elif D05 < 1.0:
-        H05 = 0.
-    else: #  1.0 < D05 < 19.7:
-        H05 = 1.2592*D05 + 2.7235
-    return H05
-def PD(t,De,Te):
-    if t < Te:
-        PD = De * (1-math.sqrt(t/Te))
-    else:
-        PD = 0
-    return PD
-#pool burning rate 0.062 kg/m2-s
-#MS ; spilt mass
-#Pool fire duration
-# Ms / (3.14*D^2/4 * br) *3/2 where 3/2 is a factor to consider shringking pool
+
 
 def print_cum_cube(cube,AA):
     F=0.
@@ -75,9 +61,13 @@ def print_cum_cube_file(cube,AA,a_file):
             break
 
 import dill
-Area = "ProcessArea"
+# Area = "ProcessArea"
 element_dump_filename = 'Bv06_dump'
-icubeloc='SCE_CUBE_XYZ2_Process'
+# icubeloc='SCE_CUBE_XYZ2_Process'
+
+with open(element_dump_filename,'rb') as element_dump:
+    lEvent = dill.load(element_dump)
+lEvent_P = lEvent
 
 # Area = "HullDeck"
 # element_dump_filename = 'Bv06_hull_dump'
@@ -86,11 +76,14 @@ icubeloc='SCE_CUBE_XYZ2_Process'
 # element_dump_filename = 'Bv06_offloading_dump'
 # icubeloc='SCE_CUBE_XYZ2_Offloading'
 
-# element_dump_filename = 'Bv06_utility_dump'
-# icubeloc='SCE_CUBE_XYZ2_Utility'
+element_dump_filename = 'Bv06_utility_dump'
+icubeloc='SCE_CUBE_XYZ2_Utility'
 
 with open(element_dump_filename,'rb') as element_dump:
     lEvent = dill.load(element_dump)
+lEvent_U = lEvent
+
+lEvent = lEvent_P + lEvent_U
 
 #Read 'Presure vessel' from Input
 iExlFilename='Bv06_i'
@@ -161,8 +154,6 @@ P_FD_Fail = 0.05 #default value? #should be adjusted for hole size or leak rate?
 P_GD_Fail = 0.05
 
 
-
-
 iExl=load_workbook(filename=icubeloc+'.xlsx')
 shCube = iExl['xyz']
 ncube = shCube.cell(1,1).value
@@ -195,7 +186,7 @@ for i in range(0,ncube):
     yy = Ycube[id]
     zz = Zcube[id]
     if cube_result2file == True:
-        f_cube_result = open(id+".txt","w")
+        f_cube_result = open(id+"_P.txt","w")
     # if (zz >= 35.0) and (zz < 44):
     #     CubeDeck = 'A'
     # elif (zz >= 44.0) and (zz < 53):
@@ -207,7 +198,9 @@ for i in range(0,ncube):
     
     for ei in range(0,len(lEvent)):
         e = lEvent[ei]
+        # print(id,e.Module, e.Key)
         if (CubeDeck[id] == e.Deck) or (id[0:3]) == e.Module:
+        # if True:
             #Exposure to jet fire
             #read frequency
             # sep[li,1] = e.JetFire.Frequency
@@ -215,7 +208,8 @@ for i in range(0,ncube):
             dx = xx - e.X
             dy = yy - e.Y
             dz = zz - (e.ReleaseHeight+35)
-            rr = math.sqrt(dx*dx+dy*dy+dz*dz)
+            # rr = math.sqrt(dx*dx+dy*dy+dz*dz)
+            rr = math.sqrt(dx*dx+dy*dy)
             #Array of jet length
             jl_e = e.jfscale*2.8893*np.power(55.5*e.TVD[:,2],0.3728) #the 3rd column of the matrix, Lowesmith formulat
             t_e = interp1d(jl_e,e.TVD[:,0],kind='linear') #Read the time when 'jl' is equal to the distance 'rr'            
@@ -233,11 +227,13 @@ for i in range(0,ncube):
                 print('something wrong in P_FD_Fail')
 
             # The following condition is to consider effects of fire wall
-            # If the firewall is considered and the source and targets are at different areas, we skip considering the jet fire effect.
-            # In other words, if the fire is not considered (firewall == false) or (if they are in the same area), we will consider the jet fire
-            if (FireWallBtn3and4 == False) or (((xx > FirewallX) and (e.X > FirewallX)) or ((xx < FirewallX) and (e.X < FirewallX))):
+            # If the protection by firewall is to be considered, fire at a PORT process moduel will not affect E&I building but may do GTG.
+            # If the protection by firewall is to be considered, fire at a STBD process moduel may affect E&I building but will not do GTG.            # 
+            
+            if (FireWallBtnUandP == True) and (((yy > 0) and (e.Y < 0)) or ((yy < 0) and (e.Y > 0))):
                 if ('EXBX' in e.Key) or ('EXBN' in e.Key):
-                    #Fire detection successful
+                    #When ESD fails, whether it is dueto Fire detection failure should be dinstinguished
+                    #ESD fail even upon Fire detection successful
                     #Probability of failure of ESD and BDV is already reflected in e.JetFire.Frequency???
                     ff = e.JetFire.Frequency*(1-P_FD_Fail)
                     if max(jl_e) < rr:                                     
@@ -247,7 +243,7 @@ for i in range(0,ncube):
                     else:                
                         ImpingeDurationArray.append([t_e(rr),ff,e.Key+"FO_Jet"])                    
 
-                    #Fire detection failure, any release irrespective of success of ESDV and BDV will result in EXBX release case      
+                    #ESD is not activated due to fire detection failure, any release irrespective of success of ESDV and BDV will result in EXBX release case      
                     ff = e.JetFire.Frequency/e.PESD/e.PBDV*P_FD_Fail
                     if max(jl_e) < rr:                                     
                         ImpingeDurationArray.append([0.,0.,e.Key+"FX_Jet"])                    
@@ -264,54 +260,6 @@ for i in range(0,ncube):
                         ImpingeDurationArray.append([e.TVD[-1,0],ff,e.Key+"FO_Jet"])                             
                     else:                
                         ImpingeDurationArray.append([t_e(rr),ff,e.Key+"FO_Jet"])                    
-            
-
-            if (id[0:3]) == e.Module:
-                #Exposure to pool fire
-                if e.EarlyPoolFire != None:
-                    #Read pool fire duration, ho
-                    dd = e.EarlyPoolFire.Diameter
-                    Ms = e.Discharge.Ms[0] - e.Discharge.Ms[-1]
-                    PFD = Ms/(3.14*dd*dd/4 * 0.062)*3/2 #Pool Fire Duration
-                    rr = math.sqrt(dx*dx+dy*dy)
-
-                    if (rr < dd) & (zz > e.ReleaseHeight) & (PFD > 0):
-                        di = PFD*(dd-rr)/dd                        
-
-                        if ('EXBX' in e.Key) or ('EXBN' in e.Key):
-                            #Fire detection successful
-                            ff = e.EarlyPoolFire.Frequency*(1-P_FD_Fail)
-                            ImpingeDurationArray.append([di,ff,e.Key+"FO_EarlyPool"])                        
-                        #Fire detection failure
-                            ff = 0.
-                            pv,hole,weather = e.Key.split("\\")
-                            for ee in lEvent:
-                                if ((pv in ee.Key) and (hole[:2] == ee.Hole[:2]) and (weather == ee.Weather)):
-                                    ff += ee.EarlyPoolFire.Frequency*P_FD_Fail
-                            ImpingeDurationArray.append([di,ff,e.Key+"FX_EarlyPool"])                                                    
-                        else:                          
-                            ImpingeDurationArray.append([di,e.EarlyPoolFire.Frequency*(1-P_FD_Fail),e.Key+"FO_EarlyPool"])
-                if e.LatePoolFire != None:
-                    #Read pool fire duration, ho
-                    dd = e.LatePoolFire.Diameter
-                    Ms = e.Discharge.Ms[0] - e.Discharge.Ms[-1]
-                    PFD = Ms/(3.14*dd*dd/4 * 0.062)*3/2 #Pool Fire Duration
-                    rr = math.sqrt(dx*dx+dy*dy)
-                    if (rr < dd) & (zz > e.ReleaseHeight) & (PFD > 0):
-                        di = PFD*(dd-rr)/dd                        
-                        if ('EXBX' in e.Key) or ('EXBN' in e.Key):
-                            #Fire detection successful
-                            ff = e.LatePoolFire.Frequency*(1-P_GD_Fail)
-                            ImpingeDurationArray.append([di,ff,e.Key+"FO_LatePool"])                        
-                        #Fire detection failure
-                            ff = 0.
-                            pv,hole,weather = e.Key.split("\\")
-                            for ee in lEvent:
-                                if ((pv in ee.Key) and (hole[:2] == ee.Hole[:2]) and (weather == ee.Weather)):
-                                    ff += ee.LatePoolFire.Frequency*P_GD_Fail
-                            ImpingeDurationArray.append([di,ff,e.Key+"FX_LatePool"])                                                    
-                        else:                          
-                            ImpingeDurationArray.append([di,e.LatePoolFire.Frequency*(1-P_GD_Fail),e.Key+"FO_LatePool"])
       
     #To pin-point a scenario that give the dimensioning scenario
     IDAsorted = sorted(ImpingeDurationArray, key = lambda fl: fl[0]) #with the longest duration at the bottom
@@ -350,71 +298,52 @@ for i in range(0,ncube):
     # print(scn)
     if InterpolationSuccess:
         CubeImpingeDuration[Cubes[i]] = di
-        if "Pool" in scn:
-            for e in lEvent:
-                if e.Key in scn:
-                    break
-            pv,hole,weather = scn.split("\\")
-            weather,pl = weather.split("_")
-            if "Early" in pl:
-                PFD = e.EarlyPoolFire.Diameter
-            elif "Late" in pl:
-                PFD = e.LatePoolFire.Diameter
-            else:
-                print("343: something wrong")
-            print("IS: {:20s}, Cube: {:10s} Duration: {:8.1f} Pool diameter: {:8.1f}".format(scn,id,di,PFD))
-            # print("{:35s} {:5s} {:4s} {:10s} {:8.1f} {:8.1f} {:8.1f} ".format(scn, Modules[pv],Deck[pv],id,di,di/60,PFD))
-            if cube_result2file == True:
-                print("{:35s} {:5s} {:4s} {:10s} {:8.1f} {:8.1f} {:8.1f} ".\
-                    format(scn, Modules[pv],Deck[pv],id,di,di/60,PFD),file=f_cube_result)                
-                print_cum_cube_file(id,IDAsorted,f_cube_result)  
-                DimCubeSuccessList[id] = "'tvd-"+pv+"_"+hole             
+                
+        pv,hole,weather = scn.split("\\")            
+        weather_fire = weather            
+        x1 = X[pv]
+        y1 = Y[pv]
+        z1 = Z[pv]
+        for e in lEvent:
+            if e.Key in scn:
+                break
+        rrifound = False
+        rri = 0
+        rr5min = 0.
+        for i in range(0,len(e.TVD)-1):
+            if (e.TVD[i,0] < di) and (e.TVD[i+1,0] >= di):
+                rri = e.TVD[i,2]
+                rr5min = e.Discharge.RRs[1]
+                rrifound = True
+                break
+        if rrifound == False:
+            print(id,"Something wrong, rri not found", di, e.TVD[-1,0])
 
-        else:
-            pv,hole,weather = scn.split("\\")            
-            weather_fire = weather            
-            x1 = X[pv]
-            y1 = Y[pv]
-            z1 = Z[pv]
-            for e in lEvent:
-                if e.Key in scn:
-                    break
-            rrifound = False
-            rri = 0
-            rr5min = 0.
-            for i in range(0,len(e.TVD)-1):
-                if (e.TVD[i,0] < di) and (e.TVD[i+1,0] >= di):
-                    rri = e.TVD[i,2]
-                    rr5min = e.Discharge.RRs[1]
-                    rrifound = True
-                    break
-            if rrifound == False:
-                print(id,"Something wrong, rri not found", di, e.TVD[-1,0])
+        # Max width of jet fire and its positing along 'x' (61%)
+        # z1 = z1+35
+        # dx=xx-x1
+        # dy=yy-y1
+        # dz=zz-z1
+        # jli = jffit(rri)
+        # xm = x1 + 0.61*dx
+        # ym = y1 + 0.61*dy
+        # zm = z1 + 0.61*dz
+        # ll = math.sqrt(dx*dx+dy*dy+dz*dz)
+        # print("IS: {:35s} {:4s}{:2s}{:6.1f}{:6.1f}{:6.1f}  Cube: {:10s}{:6.1f}{:6.1f}{:6.1f} Dx:{:6.1f}{:6.1f}{:6.1f} {:8.1f}{:8.1f}".\
+        #     format(scn,Modules[pv],Deck[pv],x1,y1,z1,id,xx,yy,zz,xx-x1,yy-y1,zz-z1,di,rri))
+        print("{:35s} {:5s} {:4s} {:10s} {:8.1f} {:8.1f} {:8.1f} {:8.1f}".\
+            format(scn, Modules[pv],Deck[pv],id,di,di/60,rri,rr5min))
+        DimCubeSuccessList[id] = "'tvd-"+pv+"_"+hole
+        if cube_result2file == True:                
+            print_cum_cube_file(id,IDAsorted,f_cube_result) 
 
-            z1 = z1+35
-            dx=xx-x1
-            dy=yy-y1
-            dz=zz-z1
-            jli = jffit(rri)
-            xm = x1 + 0.61*dx
-            ym = y1 + 0.61*dy
-            zm = z1 + 0.61*dz
-            # ll = math.sqrt(dx*dx+dy*dy+dz*dz)
-            # print("IS: {:35s} {:4s}{:2s}{:6.1f}{:6.1f}{:6.1f}  Cube: {:10s}{:6.1f}{:6.1f}{:6.1f} Dx:{:6.1f}{:6.1f}{:6.1f} {:8.1f}{:8.1f}".\
-            #     format(scn,Modules[pv],Deck[pv],x1,y1,z1,id,xx,yy,zz,xx-x1,yy-y1,zz-z1,di,rri))
-            print("{:35s} {:5s} {:4s} {:10s} {:8.1f} {:8.1f} {:8.1f} {:8.1f}".\
-                format(scn, Modules[pv],Deck[pv],id,di,di/60,rri,rr5min))
-            DimCubeSuccessList[id] = "'tvd-"+pv+"_"+hole
-            if cube_result2file == True:                
-                print_cum_cube_file(id,IDAsorted,f_cube_result) 
-
-            # print("IS: {:35s} {:4s}{:2s}{:6.1f}{:6.1f}{:6.1f}  Cube: {:10s}{:6.1f}{:6.1f}{:6.1f} Dx:{:6.1f}{:6.1f}{:6.1f} {:4s}{:2s} -> {:8s}{:8.1f}{:8.1f}{:8.1f}".\
-            #     format(scn,Modules[pv],Deck[pv],x1,y1,z1,id,xx,yy,zz,xx-x1,yy-y1,zz-z1,Modules[pv],Deck[pv],id,di,rri,2.8893*np.power(55.5*rri,0.3728)))
-            # print("IS: {:35s} {:6.1f}{:6.1f}{:6.1f}  Cube: {:10s}{:6.1f}{:6.1f}{:6.1f} Release rate: {:8.1f}".\
-                # format(scn,x1,y1,z1,id,xx,yy,zz,rri))
-            # print("SCYL: {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:6.1f} {:6.1f}".format(1000*x1,1000*y1,1000*z1,1000*xm,1000*ym,1000*zm,0,0.12*jli*1000))
-            # print("SCYL: {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:6.1f} {:6.1f}".format(1000*xm,1000*ym,1000*zm,1000*xx,1000*yy,1000*zz,0.12*jli*1000,0))
-            # print_cum_cube(id,IDAsorted) 
+        # print("IS: {:35s} {:4s}{:2s}{:6.1f}{:6.1f}{:6.1f}  Cube: {:10s}{:6.1f}{:6.1f}{:6.1f} Dx:{:6.1f}{:6.1f}{:6.1f} {:4s}{:2s} -> {:8s}{:8.1f}{:8.1f}{:8.1f}".\
+        #     format(scn,Modules[pv],Deck[pv],x1,y1,z1,id,xx,yy,zz,xx-x1,yy-y1,zz-z1,Modules[pv],Deck[pv],id,di,rri,2.8893*np.power(55.5*rri,0.3728)))
+        # print("IS: {:35s} {:6.1f}{:6.1f}{:6.1f}  Cube: {:10s}{:6.1f}{:6.1f}{:6.1f} Release rate: {:8.1f}".\
+            # format(scn,x1,y1,z1,id,xx,yy,zz,rri))
+        # print("SCYL: {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:6.1f} {:6.1f}".format(1000*x1,1000*y1,1000*z1,1000*xm,1000*ym,1000*zm,0,0.12*jli*1000))
+        # print("SCYL: {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:8.1f} {:6.1f} {:6.1f}".format(1000*xm,1000*ym,1000*zm,1000*xx,1000*yy,1000*zz,0.12*jli*1000,0))
+        # print_cum_cube(id,IDAsorted) 
     elif not InterpolationSuccess:
         print(" No dimensioning scenario",id)
         scn = 'No dimensioning scenario for ' + id
@@ -459,7 +388,7 @@ for i in range(0,ncube):
         plt.tight_layout()
         plt.show()
 
-        fig.savefig("{}.png".format(id))
+        fig.savefig("{}_P.png".format(id))
         plt.close()
 
     if cube_result2file == True:
@@ -470,72 +399,14 @@ for i in range(0,ncube):
 #     print("{:20s} {:8.1f} [min]".format(c,CubeImpingeDuration[c]/60))
 # sys.stdout.close()
 
-C = 0.
-for e in lEvent:
-    if e.Discharge.ReleaseRate*(1-e.Discharge.LiquidMassFraction) > 105:
-    # if e.Discharge.ReleaseRate > 105:
-        C += e.Frequency
-print("Leak Frequency at", Area, ":", C)
-
-CF = 0.
-CFJ = 0.
-CFEP = 0.
-CFLP = 0.
-ModuleToCheck = "KOD"
-for e in lEvent:
-    if e.Module == ModuleToCheck:
-        CFJ += e.JetFire.Frequency*6
-        if e.EarlyPoolFire != None:
-            CFEP += e.EarlyPoolFire.Frequency
-        if e.LatePoolFire != None:
-            CFLP += e.LatePoolFire.Frequency
-print ("Fire accident frequency - Jet:", CFJ)
-print ("Fire accident frequency - Early Pool:", CFEP)
-print ("Fire accident frequency - Late Pool", CFLP)
-print ("Fire accident frequency - Total", CFJ + CFEP + CFLP)
-
-""" Ts = [0,300,600,1800,3600]
-print("{:30s}{:10s}{:20s}".format("IS","Frequency","Total Release[kg]"))
-for e in lEvent:
-    MM = 0.
-    for i in range(1,5):
-        MM += 0.5*(e.Discharge.RRs[i]+e.Discharge.RRs[i-1])*(Ts[i]-Ts[i-1])
-    print("{:30s}{:10.1e}{:20.1f}".format(e.Key,e.Frequency,MM)) """
-
-
-CF = 0.
-for e in lEvent:
-    if not (e.Explosion == None):
-        CF += e.Explosion.Frequency    
-        print("{:40s} {:8.1e}".format(e.Key,e.Explosion.Frequency))
-print ("Explosion frequency ", CF)
-
-
-import shutil    
-for c in DimCubeSuccessList.values():
-    fn = c[1:]+".png"
-    # shutil.copy(".\\tvd_rev.B\\tvd-xlsx & pngs\\"+fn,".\\tvd_rev.B\\"+fn)
-    scn = c[5:]
-    for e in lEvent:
-        section,hole,weather = e.Key.split("\\")        
-        if (scn == section+"_"+hole) and (weather == '2.9F'):
-            print(scn,e.Discharge.ReleaseRate,e.Discharge.Duration)
-
-
-CLiq = 0.
-F_CLiq = 0.
-Count = 0
-TotalDuration = 0.
-for e in lEvent:
-    pv,hole,weather = e.Key.split("\\")
-    if ("7.7D" in weather) and ("-L" in pv) and (("EOBO" in hole) or ("EOBN" in hole)):
-    # if ("7.7D" in weather) and not ("-L" in pv) and (("EOBO" in hole) or ("EOBN" in hole)):
-        CLiq += e.Frequency
-        GasFraction = max(0.05,1-e.Discharge.LiquidMassFraction)
-        F_CLiq += e.Frequency*GasFraction
-        TotalDuration += e.Discharge.Duration
-        Count += 1
-        print("{:20s}{:6.0f} {:4s}{:6.1f}{:6.2f} {:6.1f}".format(pv, e.Pressure, hole[:2],  e.Discharge.ReleaseRate, GasFraction,e.Discharge.Duration))
-print(CLiq, F_CLiq)
-AvgDuration = TotalDuration / Count
-print(Count,AvgDuration)
+# for s in ['S03','S04','S05']:
+#     hazcount = 0
+#     print( "{:40s}{:10s} <> {:9}".format(s,"Jet Length","Distance"))
+#     for e in lEvent:
+#         if (s in e.Module):
+#             if ((e.X-xx) < e.JetFire.Length):
+#                 print( "{:40s}{:10.2f} > {:10.2f}".format(e.Key,e.JetFire.Length,e.X-xx))
+#                 hazcount += 1
+#             # else:
+#                 # print( "{:40s}{:10.2f} < {:10.2f}".format(e.Key,e.JetFire.Length,e.X-xx))       
+#     print(hazcount)

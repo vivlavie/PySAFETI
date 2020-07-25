@@ -7,11 +7,11 @@ import unicodedata
 import re
 
 
-def print_a_event(kwd,lEvent):
+def print_a_event(lEvent,key='',hole='',weather=''):
     i=0
     for e in lEvent:
-        if kwd in e.Key:
-            print(i,e)
+        if (key in e.Key) and (hole in e.Hole) and (weather in e.Weather):
+            print(i,e.Key)
         i += 1
 
 def slugify(value):
@@ -29,13 +29,12 @@ def slugify(value):
 
 NumDirections = 6 # 6 cones to cover the all release direction for a sphere
 
+TVDPLot = False
 
-TVDPLot = True
-
+iExlFilename='Bv06_i'
 
 #Topside
 Area = 'ProcessArea'
-iExlFilename='Bv06_i'
 cExlFilename='Bv06_c'
 # cExlFilename='Bv05jalLM_Hull_c'
 # SysLen = 7 #Length of 'v08_9m' + 1
@@ -56,25 +55,27 @@ SFXFiles = ['013-01-C1-G', '013-01-C2-G', '013-01-N1-G', '013-01-N2-G', \
     '025-01-01-G', '025-01-02-L', '025-02-01-G', '025-02-02-L', '027-01-G-DA', '027-01-G-DB', '027-01-G-DC', '027-02-G', '027-03-G',  \
     '043-03-G', '045-01-G', '045-02-01-G', '045-02-02-L', '045-03-G', '046-02-L', '046-03-L',\
     '021-01-01-L','046-01-01-L','046-01-02-L','046-01-03-L','046-01-04-L','062-01-01-L','043-01-01-G','043-01-02-L','043-02-01-G','043-02-02-L']
-TVDprefix = ''
+TVDprefix = '.\\tvd_rev.B\\tvd-xlsx & pngs\\'
 element_dump_filename = 'Bv06_dump'
 #Topside Parameters End
 
 #Offloaidng ara analysis
 # 'Flammable dispersion' is not relevant??? All vaporized??
-cExlFilename='Bv06_O_c'
-SFXFiles = ['021-02-L']
-element_dump_filename = 'Bv06_offloading_dump'
+# cExlFilename='Bv06_O_c'
+# SFXFiles = ['021-02-L']
+# element_dump_filename = 'Bv06_offloading_dump'
 
 #Utlity analysis
-cExlFilename='Bv06_u_c'
-SFXFiles = ['045-04-G','062-01-02-L']
-element_dump_filename = 'Bv06_utility_dump'
+# cExlFilename='Bv06_u_c'
+# SFXFiles = ['045-04-G','062-01-02-L']
+# element_dump_filename = 'Bv06_utility_dump'
 
 #Hull deck analysis
-cExlFilename='Bv06_h_c'
-SFXFiles = ['131-01-L-fwdP','131-01-L-fwdS','131-01-L-aftP','131-01-L-aftS','131-02-L-fwdP','131-02-L-fwdS','131-02-L-aftP','131-02-L-aftS','057-01-02-L','057-01-01-G','046-04-L','021-01-02-L','013-06-L','013-05-L']
-element_dump_filename = 'Bv06_hull_dump'
+# Area = 'Hull'
+# cExlFilename='Bv06_h_c'
+# SFXFiles = ['131-01-L-fwdP','131-01-L-fwdS','131-01-L-aftP','131-01-L-aftS','131-02-L-fwdP','131-02-L-fwdS','131-02-L-aftP','131-02-L-aftS','057-01-02-L','057-01-01-G','046-04-L','021-01-02-L','013-06-L','013-05-L']
+# TVDprefix = '.\\tvd_rev.B\\tvd-xlsx & pngs\\'
+# element_dump_filename = 'Bv06_hull_dump'
 
 
 
@@ -104,6 +105,7 @@ def jffit(m):
     return jl_lowe
 def mfit(jl):
     m = np.power(10,math.log10(jl/2.8893)/0.3728) / 55.5
+    
     return m
 
 class Event:
@@ -328,10 +330,12 @@ class Dispersion:
         return fmt
 
 class JetFire:
-    def __init__(self,length,sep,jff):
+    def __init__(self,length,sep,jff,d04,d12):
         self.Length = length
         self.SEP = sep
         self.Frequency = jff
+        self.D04 = d04
+        self.D12 = d12
         self.Ts = [0.,0.,0.,0.,0.]
         self.JetLengths = [0.,0.,0.,0.,0.]
     def __str__(self):
@@ -341,10 +345,12 @@ class JetFire:
         return fmt
 
 class EarlyPoolFire:
-    def __init__(self,diameter,sep,epff):
+    def __init__(self,diameter,sep,epff,d04,d12):
         self.Diameter = diameter
         self.SEP = sep
         self.Frequency = epff
+        self.D04 = d04 #Distance to 4kW/m2
+        self.D12 = d12 #Distance to 12.4 kW/m2
         self.Ts = [0.,0.,0.,0.,0.]
         self.PoolDiameters = [0.,0.,0.,0.,0.]
     def __str__(self):
@@ -353,10 +359,12 @@ class EarlyPoolFire:
             format(self.Frequency, self.SEP, a, b, c, d, e)
 
 class LatePoolFire:
-    def __init__(self,diameter,sep,epff):
+    def __init__(self,diameter,sep,epff,d04,d12):
         self.Diameter = diameter
         self.SEP = sep
         self.Frequency = epff
+        self.D04 = d04 #Distance to 4kW/m2
+        self.D12 = d12 #Distance to 12.4 kW/m2
         self.Ts = [0.,0.,0.,0.,0.]
         self.PoolDiameters = [0.,0.,0.,0.,0.]
     def __str__(self):
@@ -954,6 +962,8 @@ for r in range(2,shJet.max_row+1):
             #J00[key] = jfl
             sep = shJet.cell(r,11).value
             JetSEP[key] = sep
+            d04 = shJet.cell(r,15).value
+            d12 = shJet.cell(r,16).value
 
             e = lEvent[i]
             jff = e.Frequency*e.PImdIgn/NumDirections
@@ -962,7 +972,7 @@ for r in range(2,shJet.max_row+1):
             # elif weather == '6.6/D':
             #     jff = jff*0.82
             JetFrequency[key] = jff
-            lEvent[i].JetFire = JetFire(jfl,sep,jff)
+            lEvent[i].JetFire = JetFire(jfl,sep,jff,d04,d12)
 
             if e.Discharge.Ts[2] != 0:
                 jf0 = e.JetFire.Length
@@ -1079,11 +1089,14 @@ if 'Early Pool Fire' in cExl.sheetnames:
         sep = shPool.cell(r,11).value    
         EPSEP[key] = sep
         dia = shPool.cell(r,10).value    
+        d04 = shPool.cell(r,15).value    
+        d12 = shPool.cell(r,16).value    
+        
         for e in lEvent:
             if e.Key == key:
                 epff = e.Frequency*e.PImdIgn
                 EPFreq[key] = epff
-                e.EarlyPoolFire = EarlyPoolFire(dia,sep,epff)
+                e.EarlyPoolFire = EarlyPoolFire(dia,sep,epff,d04,d12)
                 break
 
 
@@ -1104,12 +1117,14 @@ if 'Late Pool Fire' in cExl.sheetnames:
         sep = shPool.cell(r,11).value    
         LPSEP[key] = sep
         dia = shPool.cell(r,10).value    
+        d04 = shPool.cell(r,15).value    
+        d12 = shPool.cell(r,16).value    
         for e in lEvent:
             if e.Key == key:
                 # epff = e.Frequency*(1-e.PImdIgn)*e.PDelIgn
                 epff = e.Frequency*e.PDelIgn
                 LPFreq[key] = epff
-                e.LatePoolFire = LatePoolFire(dia,sep,epff)
+                e.LatePoolFire = LatePoolFire(dia,sep,epff,d04,d12)
 
 
 #shFireball
@@ -1154,6 +1169,10 @@ for e in lEvent:
         Fe += e.EarlyPoolFire.Frequency
     if e.LatePoolFire is not None:    
         Fl += e.LatePoolFire.Frequency
+Fj = 0.
+for e in lEvent:
+    if "S04" in e.Module:
+        Fj += e.JetFire.Frequency
 
 print("{:15s} Liquid Leak Frequency: {:.2e}".format(Area, F))
 print("{:15s} Pool fire Toal Frequency: Early {:.2e} Late {:.2e}".format(Area, Fe,Fl))
