@@ -19,8 +19,8 @@ import matplotlib.pylab as pltparam
 
 # sys.stdout = open('DimCube2.txt','w')
 
-WantPlot = True
-cube_result2file = True
+WantPlot = False
+cube_result2file = False
 
 
 Modules = ['P02','S02','P03','S03','P04','S04','P05','S05']
@@ -91,7 +91,7 @@ element_dump_filename = 'Bv06_dump'
 # icubeloc='SCE_CUBE_XYZ2_Process'
 
 with open(element_dump_filename,'rb') as element_dump:
-    lEvent = dill.load(element_dump)
+    lEvent = dill.load(element_dump,encoding='bytes')
 
 
 def jffit(m):
@@ -227,7 +227,35 @@ for mm in D:
             cfp = cf
             # print(cfp,cf)
             jp = j
-    
+    #The duration that is the closest to the dimensioning frequency
+    K = 0
+    for j in IDAsorted:
+        if (j[1] > 0) and (('EOBO' in j[2]) or ('EOBN' in j[2])):
+            break
+        K += 1
+    jdim = j[2]
+    F = 0
+    for j in IDAsorted[-2:0:-1]:
+        if (j[2] != jdim):
+            F += j[1]
+        else:
+            break
+    F += j[1]
+    fclose = j[0]
+    Fclose = F
+    # print(mm, jdim, j[0],F)
+    #The longest duration to an adjacent module?    
+    F = IDAsorted[-1][1]
+    for j in IDAsorted[-2:0:-1]:
+        if (j[1] > 0) and (('EOBO' in j[2]) or ('EOBN' in j[2])):
+            break
+        else:
+            F += j[1]
+    F += j[1]
+    jlong = j[2]
+    # print(mm, jlong, j[0],F)
+    print("{:3s} {:3s} {:40s} {:8.1f} {:8.2e} {:40s} {:8.1f} {:8.2e}".format(s,t,jdim,fclose,Fclose,jlong, j[0],F))
+
     
     if cube_result2file == True:
         f_cube_result = open(mm +".txt","w")
@@ -238,7 +266,7 @@ for mm in D:
             print_cum_cube_file(mm,IDAsorted,f_cube_result) 
         
     elif not InterpolationSuccess:
-        print(" No dimensioning scenario",mm)
+        # print(" No dimensioning scenario",mm)
         scn = 'No dimensioning scenario for ' + mm
         # print_cum_cube(id+" No dimensioning scenario ",IDAsorted)        
         if cube_result2file == True:
@@ -287,4 +315,45 @@ for mm in D:
 
     if cube_result2file == True:
         f_cube_result.close()
+
+print("Jet fire frequency in Mdoues (Directional")
+for m in Modules:
+    F = 0.
+    for e in lEvent:
+        if e.Module == m:
+            F += e.JetFire.Frequency
+    print("{:10s}{:10.2e}".format(m,F))
+
+Source = 'S05'
+
+#Spreading to other module
+# Target = 'S04'
+# dist = D[Source+Target]
+# print(Source, Target, "jet fire length longer than ", dist)
+
+#Spreading out of the source module
+dist = 0.5*min(Coords[Source][3:5])
+print(Source, "Jet fire out of the module: the shortest length:",dist)
+
+distx = 0.5*Coords[Source][3]
+disty = 0.5*Coords[Source][4]
+for m in [Source]:
+    Fx = 0.
+    Fy = 0.
+    for e in lEvent:
+        if (e.Module == m) and (e.JetFire.Length > distx):
+            Fx += e.JetFire.Frequency
+        if (e.Module == m) and (e.JetFire.Length > disty):
+            Fy += e.JetFire.Frequency
+    print("{:10s}{:10.2e}{:10.2e}".format(m,Fx,Fy))
+
+import pandas as pd
+
+array = [['a1', 'a2', 'a3'],
+         ['a4', 'a5', 'a6'],
+         ['a7', 'a8', 'a9'],
+         ['a10', 'a11', 'a12', 'a13', 'a14']]
+
+df = pd.DataFrame(array).T
+df.to_excel(excel_writer = "test.xlsx")
 
